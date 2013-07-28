@@ -29,9 +29,13 @@ schreibenNummer nummer
 	| nummer == 17 = "siebzehn"
 	| nummer < 20 = algs !! (nummer -10) ++ "zehn"
 	| nummer < 100 = schreibenNummerAux (nummer `mod` 10) ++ zigs !! ((nummer `div` 10)-2)
+	| nummer < 200 = "einhundert" ++ if nummer `mod` 100 > 0 then (schreibenNummer (nummer `mod` 100)) else ""
 	| nummer < 1000 = algs !! (nummer `div` 100) ++ "hundert" ++ if nummer `mod` 100 > 0 then (schreibenNummer (nummer `mod` 100)) else ""
-	| nummer < 1000000 = schreibenNummer (nummer `div` 1000) ++ "tausend" ++ if nummer `mod` 1000 > 0 then (schreibenNummer (nummer `mod` 1000)) else ""
-	| otherwise = "undef"
+	| nummer < 2000 = "eintausend" ++ if nummer `mod` 1000 > 0 then (schreibenNummer (nummer `mod` 1000)) else ""
+	| nummer < 10^6 = schreibenNummer (nummer `div` 1000) ++ "tausend" ++ if nummer `mod` 1000 > 0 then (schreibenNummer (nummer `mod` 1000)) else ""
+	| nummer < 2*(10^6) = "eine Million" ++ if nummer `mod` 10^6 > 0 then " " ++ (schreibenNummer (nummer `mod` 10^6)) else ""
+	| nummer < 10^9 = schreibenNummer (nummer `div` 10^6) ++ " Millionen" ++ if nummer `mod` 10^6 > 0 then " " ++ (schreibenNummer (nummer `mod` 10^6)) else ""
+	| otherwise = "sehr viel"
 
 schreibenNummerAux nummer
 	| nummer == 0 = ""

@@ -54,9 +54,21 @@ run window Haupt = do
 		run window Lesen
 		done
 
-	_ <- spawnEvent (forever
+	let schreibenAction = do
+		exit
+		run window Schreiben
+		done
+
+	let freiAction = do
+		exit
+		run window Frei
+		done
+
+	_ <- spawnEvent (forever (
 	                   (beendenCl >>> destroy window) +>
-	                   (lesenCl >>> lesenAction))
+	                   (schreibenCl >>> schreibenAction) +>
+	                   (freiCl >>> freiAction) +>
+	                   (lesenCl >>> lesenAction)))
 	finishHTk
 
 run window Lesen = do
@@ -113,9 +125,102 @@ run window Lesen = do
 	                   (zuruckCl >>> zuruckAction)) )
 	finishHTk
 
+run window Schreiben = do
+	zuruckB <- newButton window [text "Zurück"]
+	beendenB <- newButton window [text "Beenden"]
+	val <- randomRIO (0,1000)
+	answer <- newIORef (schreibenNummer val)
 
-run _ _ = return ()
+	status <- newLabel window [text "", font (Lucida,18::Int)]
+	nummer <- newLabel window [text (show val), relief Raised]
+	entry <- (newEntry window [value "", width 30])::IO (Entry String)
+
+	pack status [Side AtTop, IPadX 10 ,PadX 10, PadY 5]
+	pack nummer [Side AtTop, IPadX 10 ,PadX 10, PadY 20]
+	pack entry [Side AtTop, IPadX 10 ,PadX 10, PadY 10]
+
+	pack beendenB [Side AtBottom, Fill X]
+	pack zuruckB [Side AtBottom, Fill X]
+
+	(entered,_) <- bind entry [WishEvent [] (KeyPress (Just (KeySym "Return")))]
+	zuruckCl <- clicked zuruckB
+	beendenCl <- clicked beendenB
+
+	let exit = do
+		destroy status
+		destroy nummer
+		destroy entry
+		destroy zuruckB
+		destroy beendenB
+		done
+
+	let enterAction = do
+		attempt <- (getValue entry)::IO String
+		correct <- readIORef answer
+		if attempt == correct then do
+			val <- randomRIO (0,1000)
+			_ <- writeIORef answer (schreibenNummer val)
+			nummer # text (show val)
+			status # text "Richtig"
+			status # foreground (0::Int,130::Int,0::Int)
+		else do
+			status # text "Falsch"
+			status # foreground (170::Int,10::Int,0::Int)
+		entry # value ""
+		done
+
+	let zuruckAction = do
+		exit
+		run window Haupt
+		done
+	_ <- spawnEvent (forever (
+	                   (beendenCl >>> destroy window) +>
+	                   (entered >>> enterAction) +>
+	                   (zuruckCl >>> zuruckAction)) )
+	finishHTk
+
+run window Frei = do
+	zuruckB <- newButton window [text "Zurück"]
+	beendenB <- newButton window [text "Beenden"]
+
+	nummer <- newMessage window [text "", aspect 1000 ,relief Raised]
+	entry <- (newEntry window [value "", width 30])::IO (Entry String)
+
+	pack nummer [Side AtTop, IPadX 10 ,PadX 10, PadY 5]
+	pack entry [Side AtTop, IPadX 10 ,PadX 10, PadY 10]
+
+	pack beendenB [Side AtBottom, Fill X]
+	pack zuruckB [Side AtBottom, Fill X]
+
+	(entered,_) <- bind entry [WishEvent [] (KeyPress (Just (KeySym "Return")))]
+	zuruckCl <- clicked zuruckB
+	beendenCl <- clicked beendenB
+
+	let exit = do
+		destroy nummer
+		destroy entry
+		destroy zuruckB
+		destroy beendenB
+		done
+
+	let enterAction = do
+		attempt <- (getValue entry)::IO String
+		nummer # text (schreibenNummer (read attempt::Int))
+		entry # value ""
+		done
+
+	let zuruckAction = do
+		exit
+		run window Haupt
+		done
+	_ <- spawnEvent (forever (
+	                   (beendenCl >>> destroy window) +>
+	                   (entered >>> enterAction) +>
+	                   (zuruckCl >>> zuruckAction)) )
+	finishHTk
+
+ -- run _ _ = return ()
 
 main = do
-	window <- initHTk [text "Nummers auf Deutsch", size (300,200)]
+	window <- initHTk [text "Nummers auf Deutsch", size (500,200)]
 	run window Haupt
