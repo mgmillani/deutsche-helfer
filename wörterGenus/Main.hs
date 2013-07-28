@@ -25,8 +25,10 @@ import HTk.Toplevel.HTk
 
 import Laden
 
-windowX = 200
+windowX = 300
+minY = 300
 buttonY = 60
+maxHist = 5
 
 myLen = foldl (\x y -> x+1) 0
 
@@ -34,7 +36,7 @@ haupt window modules = do
 	beendenB <- newButton window [text "Beenden"]
 	buttons <- mapM (\x -> newButton window [text x]) modules
 
-	window # size (windowX,buttonY*(1 + (myLen buttons)) )
+	window # size (windowX,max (buttonY*(1 + (myLen buttons))) minY )
 
 	mapM_ (\x -> pack x [Side AtTop,Fill X]) buttons
 	pack beendenB [Side AtBottom, Fill X]
@@ -61,17 +63,20 @@ haupt window modules = do
 	finishHTk
 
 spiel window worter = do
+
 	beendenB <- newButton window [text "Beenden"]
 	status <- newLabel window [text "", font (Lucida,18::Int)]
 	let upperIndex = length worter - 1
 	pos <- randomRIO (0,upperIndex)
 	wort <- newLabel window [text $ snd $ worter !! pos]
 	answer <- newIORef $ fst $ worter !! pos
+	past <- newIORef [""]
 	genus <- newVBox window []
 	derB <- newButton genus [text "der", foreground (130::Int,5::Int,0::Int)]
 	dieB <- newButton genus [text "die", foreground (5::Int,130::Int,0::Int)]
 	dasB <- newButton genus [text "das", foreground (0::Int,5::Int,130::Int)]
 	zuruck <- newButton window [text "Züruck"]
+	history <- newListBox window [value [""],bg "white", size(15,5)]:: IO (ListBox String)
 
 	pack status [Side AtTop,PadY 10]
 	pack beendenB [Side AtBottom, Fill X]
@@ -81,6 +86,7 @@ spiel window worter = do
 	pack dasB [Side AtTop, Fill X]
 	pack genus [Side AtLeft]
 	pack wort [Side AtLeft]
+	pack history [Side AtRight]
 
 	derCl <- clicked derB
 	dieCl <- clicked dieB
@@ -93,6 +99,7 @@ spiel window worter = do
 		destroy dieB
 		destroy dasB
 		destroy zuruck
+		destroy history
 		destroy beendenB
 		destroy wort
 		destroy genus
@@ -108,6 +115,12 @@ spiel window worter = do
 	let check attempt = do
 		right <- readIORef answer
 		if right == attempt then do
+			-- adiciona a palavra no historico
+			w <- getText wort
+			let neuW = (right ++ " " ++ w)
+			hist <- readIORef past
+			writeIORef past (take maxHist ( neuW : hist))
+			history # value (neuW : hist)
 			-- marca como correto
 			status # text "Richtig"
 			status # foreground (0::Int,135::Int,5::Int)
@@ -138,7 +151,7 @@ spiel window worter = do
 	finishHTk
 
 main = do
-	window <- initHTk [text "Wörter Genus", size (windowX,200)]
+	window <- initHTk [text "Wörter Genus", size (windowX,minY)]
 	files <- getDirectoryContents "daten"
 	let modules = (filter (\x -> x /= "." && x /= "..") files)
 
